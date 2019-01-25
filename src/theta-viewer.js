@@ -12,6 +12,9 @@
     'use strict';
 
     var ThetaViewer = function (element, texture, mode) {
+        var autorotate,
+            autorotateLng = 0,
+            speed = 2 ;
 
         // レンダラーの生成と要素の追加
         function createRenderer(that, element, mode) {
@@ -177,6 +180,11 @@
                 onMouseDownLng = lng;
                 onMouseDownX   = event.clientX;
                 onMouseDownY   = event.clientY;
+                if(autorotate){
+                    // 自動回転してたら止める
+                    autorotate = clearInterval(autorotate);
+                    onMouseDownLng = autorotateLng;
+                }
             }
 
             // マウス移動時の処理
@@ -195,7 +203,7 @@
 
                     // 緯度経度からθφを導出
                     phi   = (90 - lat) * Math.PI / 180;
-                    theta = lng * Math.PI / 180;
+                    theta = lng * speed * Math.PI / 180;
 
                     camera.lookAt({
                         x: Math.sin(phi) * Math.cos(theta),
@@ -218,6 +226,11 @@
 
                 onTouchX = touch.screenX;
                 onTouchY = touch.screenY;
+                if(autorotate){
+                    // 自動回転してたら止める
+                    autorotate = clearInterval(autorotate);
+                    onTouchX = touch.screenX + autorotateLng;
+                }
             }
 
 
@@ -235,7 +248,7 @@
 
                 // 緯度経度からθφを導出
                 phi   = (90 - lat) * Math.PI / 180;
-                theta = lng * Math.PI / 180;
+                theta = lng * speed * Math.PI / 180;
 
                 camera.lookAt({
                     x: Math.sin(phi) * Math.cos(theta),
@@ -315,6 +328,17 @@
                 that.renderer.render(that.scene, that.camera);
             };
         }(this));
+        var cam = this;
+        autorotate = setInterval(function(){
+            autorotateLng = autorotateLng - 0.2;
+            var phi  = (90) * Math.PI / 180;
+            var theta = autorotateLng * Math.PI /180;
+            cam.camera.lookAt({
+                x: Math.sin(phi) * Math.cos(theta),
+                y: Math.cos(phi),
+                z: Math.sin(phi) * Math.sin(theta)
+            });
+        }, 30);
     };
 
     // キューブマップの生成
@@ -742,7 +766,7 @@
         return this;
     };
 
-}(jQuery));
+}(jQuery110));
 
 Modernizr.addValueTest = function(property,value){
 	var testName= (property+value).replace(/-/g,'');
