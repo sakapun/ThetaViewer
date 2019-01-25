@@ -10,8 +10,9 @@
 
 (function ($) {
   'use strict';
+  var theta;
 
-  var ThetaViewer = function (element, texture, mode) {
+  var ThetaViewer = function (element, texture, mode, option) {
 
     // レンダラーの生成と要素の追加
     function createRenderer(that, element, mode) {
@@ -38,15 +39,32 @@
 
     // カメラの生成とシーンへの追加
     function createCamera(that) {
-      var fov    = 72, // 視野角
+      var fov    = option.x >= 20 && option.x <= 150 ? option.x : 72, // 視野角
         aspect = element.width() / element.height(), // アスペクト比
         near   = 0.1, // 奥行きの表示範囲の最小値
         far    = 1000; // 奥行きの表示範囲の最大値
 
       that.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
       // カメラの注視点
-      that.camera.lookAt({ x: 1, y: 0, z: 0 });
+      that.camera.lookAt(calculateXYZ(option));
       that.scene.add(that.camera);
+    }
+
+    function calculateXYZ (option) {
+      var phi, theta;
+      // 緯度経度を求める
+      var lat = Math.max(-85, Math.min(85, option.y));
+      var lng = option.z;
+
+      // 緯度経度からθφを導出
+      phi   = (90 - lat) * Math.PI / 180;
+      theta = lng * Math.PI / 180;
+
+      return {
+        x: Math.sin(phi) * Math.cos(theta),
+        y: Math.cos(phi),
+        z: Math.sin(phi) * Math.sin(theta)
+      };
     }
 
     // 形状(球体)の生成
@@ -152,8 +170,8 @@
         onMouseDownLng   = 0,     // マウス押し下げ位置の経度
         onMouseDownX     = 0,     // マウス押し下げ位置のx座標
         onMouseDownY     = 0,     // マウス押し下げ位置のy座標
-        lat              = 0,     // 現在のカメラの緯度
-        lng              = 0,     // 現在のカメラの経度
+        lat              = option.y >= -90 && option.y <= 90 ? option.y : 0,     // 現在のカメラの緯度
+        lng              = option.z >= 0 && option.z <= 360 ? option.z : 0,     // 現在のカメラの経度
         onTouchX         = 0,     // タッチした位置のx座標
         onTouchY         = 0,     // タッチした位置のy座標
         camera           = that.camera,
@@ -656,9 +674,10 @@
   }
 
 
-  function activateThetaViewer(that, texture, mode) {
-    var thetaViewer = new ThetaViewer(that, texture, mode);
+  function activateThetaViewer(that, texture, mode, option) {
+    var thetaViewer = new ThetaViewer(that, texture, mode, option);
     thetaViewer.render();
+    theta = thetaViewer;
   }
 
   function imageLoadError(image_url) {
@@ -689,13 +708,13 @@
 
   // jQueryプラグイン化
   // テクチャーがロード済みの場合
-  $.fn.createThetaViewerWithTexture = function (texture) {
-    activateThetaViewer(this, texture, rendererModeSelector());
+  $.fn.createThetaViewerWithTexture = function (texture, option = {x: 1, y: 0, z: 0}) {
+    activateThetaViewer(this, texture, rendererModeSelector(), option);
     return this;
   };
 
   // テクスチャーをこれからロードする場合
-  $.fn.createThetaViewer = function (image_url) {
+  $.fn.createThetaViewer = function (image_url, option = {x: 1, y: 0, z: 0}) {
     var onload,
       onerror,
       loadTexture,
@@ -704,7 +723,7 @@
 
     // テクスチャーのロードが終了時の処理
     onload = function (texture) {
-      activateThetaViewer(that, texture, mode);
+      activateThetaViewer(that, texture, mode, option);
     };
 
     // テクスチャーのロードが失敗時の処理
@@ -741,6 +760,10 @@
 
     return this;
   };
+
+  $.fn.getActiveTheta = function () {
+    return theta;
+  }
 
 }(jQuery));
 
